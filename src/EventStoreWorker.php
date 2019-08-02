@@ -88,9 +88,23 @@ class EventStoreWorker extends Command
                 }
             }, 'report');
     }
+    
+    protected function makeSerializableEvent(AcknowledgeableEventRecord $ack)
+    {
+        $event = new DataEventRecord();
+        $created = new Carbon($ack->getCreated());
+
+        $event->setEventType($ack->getType());
+        $event->setCreatedEpoch($created->getTimestamp() * 1000);
+        $event->setData(json_encode($ack->getData()));
+        $event->setMetadata(json_encode($ack->getMetadata()));
+
+        return new JsonEventRecord($event);
+    }
 
     public function dispatch(EventRecord $event)
     {
+        $event = $this->makeSerializableEvent($event);
         $type = $event->getType();
         $class = config('eventstore.namespace') . '\\' . $type;
 
